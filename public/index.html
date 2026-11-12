@@ -1,150 +1,660 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f8f9ff">
-    <title>NorthGateWay | Entity Intelligence</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/styles.css">
-  </head>
-  <body>
-    <header class="topbar">
-      <a class="brand" href="#" aria-label="NorthGateWay home">
-        <span class="brand-mark">N</span>
-        <span><strong>NorthGateWay</strong><small>ENTITY INTELLIGENCE</small></span>
-      </a>
-      <div class="case-chip"><span class="eyebrow">ACTIVE FILE</span><strong id="case-name">KYC-94021 · Apex Maritime Holdings Ltd</strong></div>
-      <div class="user-chip"><span class="status-dot"></span><span>Sarah Chen <small>AC-8821 · Senior Analyst</small></span></div>
-    </header>
+<head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>NorthGateWay // Ownership Intelligence &amp; KYC Mapper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "background": "#f8f9ff",
+            "surface": "#f8f9ff",
+            "surface-dim": "#cbdbf5",
+            "surface-bright": "#f8f9ff",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#eff4ff",
+            "surface-container": "#e5eeff",
+            "surface-container-high": "#dce9ff",
+            "surface-container-highest": "#d3e4fe",
+            "on-surface": "#0b1c30",
+            "on-surface-variant": "#45464d",
+            "outline": "#76777d",
+            "outline-variant": "#c6c6cd",
+            "primary": "#000000",
+            "on-primary": "#ffffff",
+            "primary-container": "#131b2e",
+            "on-primary-container": "#7c839b",
+            "secondary": "#545f73",
+            "on-secondary": "#ffffff",
+            "secondary-container": "#d5e0f8",
+            "on-secondary-container": "#586377",
+            "error": "#ba1a1a",
+            "on-error": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-error-container": "#93000a"
+          },
+          fontFamily: {
+            sans: ["Inter", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="/styles.css"/>
+</head>
+<body class="bg-background font-sans text-on-surface antialiased min-h-screen flex flex-col">
 
-    <div class="app-shell">
-      <aside class="sidebar">
-        <div class="sidebar-section">
-          <div class="eyebrow">ANALYTICAL MODULES</div>
-          <nav aria-label="Main navigation">
-            <button class="nav-link active" data-view="review"><span class="nav-icon">⌘</span> Ownership map &amp; review</button>
-            <button class="nav-link" data-view="judgment"><span class="nav-icon">△</span> Judgment queue <span id="nav-flag-count" class="nav-count">0</span></button>
-            <button class="nav-link" data-view="audit"><span class="nav-icon">≡</span> Audit trail</button>
-            <button class="nav-link" data-view="confirmed"><span class="nav-icon">✓</span> Confirmed record</button>
-            <button class="nav-link" data-view="pilot"><span class="nav-icon">▥</span> Pilot metrics</button>
-          </nav>
+  <!-- TOP STATUTORY GLOBAL HEADER -->
+  <header class="fixed top-0 left-0 right-0 h-14 bg-surface-container-lowest z-50 shadow-[0_1px_8px_rgba(0,0,0,0.06)] flex items-center justify-between px-4 border-b border-outline-variant/30">
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 bg-primary-container text-on-primary flex items-center justify-center rounded shadow-sm">
+          <span class="material-symbols-outlined text-[19px] text-cyan-400">shield</span>
         </div>
-        <div class="sidebar-foot">
-          <span class="status-dot"></span>
-          <div><strong>Preparation tool</strong><small>No risk rating access</small></div>
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-on-surface tracking-tight uppercase leading-none">NorthGateWay</span>
+          <span class="text-[10px] text-on-surface-variant tracking-wider uppercase font-semibold">Entity Intelligence v4.12</span>
         </div>
-      </aside>
-
-      <main class="content">
-        <div id="error-banner" class="error-banner hidden" role="alert"></div>
-        <section class="page-heading">
-          <div>
-            <div class="eyebrow">CORPORATE OWNERSHIP REVIEW <span class="separator">/</span> SYNTHETIC PILOT</div>
-            <h1 id="page-title">Ownership map &amp; review</h1>
-            <p id="page-subtitle">Verify source-backed claims before ownership is confirmed.</p>
-          </div>
-          <div class="heading-actions">
-            <label class="button button-secondary upload-button">
-              <span aria-hidden="true">↑</span> Add text document
-              <input id="upload-input" type="file" accept=".txt,text/plain">
-            </label>
-            <span class="pilot-tag"><i></i> MODEL PREPARATION ONLY</span>
-          </div>
-        </section>
-
-        <section class="metrics-row" aria-label="Case summary">
-          <article class="metric-card"><span class="metric-label">DOCUMENTS</span><strong id="metric-documents">—</strong><small>Current &amp; superseded versions</small></article>
-          <article class="metric-card"><span class="metric-label">UNVERIFIED FIELDS</span><strong id="metric-unverified">—</strong><small>Awaiting analyst confirmation</small></article>
-          <article class="metric-card"><span class="metric-label">JUDGMENT ITEMS</span><strong id="metric-flags">—</strong><small>Require human resolution</small></article>
-          <article class="metric-card"><span class="metric-label">OWNERS ≥ <span id="metric-threshold">25</span>%</span><strong id="metric-owners">—</strong><small>Threshold is configurable</small></article>
-        </section>
-
-        <section id="view-review" class="view-panel">
-          <div class="workspace-grid">
-            <article class="panel ownership-panel">
-              <div class="panel-heading">
-                <div><span class="eyebrow">LAYERED OWNERSHIP</span><h2>Ownership map</h2></div>
-                <span class="quiet-badge">Threshold ≥ <span id="map-threshold">25</span>%</span>
-              </div>
-              <div id="ownership-map" class="ownership-map"></div>
-              <div class="math-note"><span class="math-symbol">ƒ</span><span><strong>Effective ownership</strong><small>Each path is multiplied through the ownership chain. Only verified, unflagged claims appear.</small></span></div>
-              <div class="panel-divider"></div>
-              <div class="source-heading"><div><span class="eyebrow">SOURCE DOCUMENTS</span><h3>Document register</h3></div><span id="doc-count" class="quiet-badge">0 files</span></div>
-              <div id="document-list" class="document-list"></div>
-            </article>
-
-            <article class="panel source-panel">
-              <div class="panel-heading">
-                <div><span class="eyebrow">VERIFIABLE EVIDENCE</span><h2>Source viewer</h2></div>
-                <span id="source-page" class="quiet-badge">Select a claim</span>
-              </div>
-              <div class="source-toolbar"><span class="file-icon">▤</span><span id="source-filename">No source selected</span><span class="mono muted">TEXT INDEX</span></div>
-              <div id="source-lines" class="source-lines"><div class="empty-state">Choose a claim to inspect its cited source line.</div></div>
-              <div class="source-footer"><span class="verified-mark">✓</span> Quote and page/line pointer validated deterministically</div>
-            </article>
-          </div>
-
-          <article class="panel review-panel">
-            <div class="panel-heading review-heading">
-              <div><span class="eyebrow">FIELD VERIFICATION QUEUE</span><h2>Confirm ownership claims</h2></div>
-              <span id="review-count" class="quiet-badge">0 claims</span>
-            </div>
-            <div id="review-list" class="review-list"></div>
-          </article>
-        </section>
-
-        <section id="view-judgment" class="view-panel hidden">
-          <article class="panel">
-            <div class="panel-heading"><div><span class="eyebrow">HUMAN JUDGMENT REQUIRED</span><h2>Flagged claims</h2></div><span id="judgment-count" class="quiet-badge">0 items</span></div>
-            <p class="panel-intro">Flagged claims are kept out of the standard confirmation list until a reviewer records a reasoned resolution.</p>
-            <div id="judgment-list" class="review-list"></div>
-          </article>
-        </section>
-
-        <section id="view-audit" class="view-panel hidden">
-          <article class="panel">
-            <div class="panel-heading"><div><span class="eyebrow">APPEND-ONLY EVENT HISTORY</span><h2>Audit trail</h2></div><span id="audit-count" class="quiet-badge">0 events</span></div>
-            <div class="table-wrap"><table><thead><tr><th>TIME</th><th>EVENT</th><th>FIELD</th><th>ANALYST</th><th>CHANGE / REASON</th></tr></thead><tbody id="audit-list"></tbody></table></div>
-          </article>
-        </section>
-
-        <section id="view-confirmed" class="view-panel hidden">
-          <article class="panel">
-            <div class="panel-heading"><div><span class="eyebrow">READ-ONLY CASE HANDOFF</span><h2>Confirmed ownership record</h2></div><span class="quiet-badge">NO RISK FIELDS</span></div>
-            <p class="panel-intro">This record contains only analyst-confirmed ownership. The service has no risk-rating field and no write path to the case risk assessment.</p>
-            <div id="confirmed-list" class="review-list"></div>
-          </article>
-        </section>
-
-        <section id="view-pilot" class="view-panel hidden">
-          <article class="panel">
-            <div class="panel-heading"><div><span class="eyebrow">QUALITY &amp; GOVERNANCE</span><h2>Pilot metrics</h2></div><span class="quiet-badge">AUDIT-DERIVED</span></div>
-            <p class="panel-intro">Metrics are calculated from document and review events in the audit store—not analyst self-reporting.</p>
-            <div id="pilot-metrics" class="pilot-metrics"></div>
-            <div class="pilot-note"><strong>Synthetic prototype limitation</strong><p>Correction counts are based on edited field events. File duration is measured from the first to last recorded event for each document; cases with only one event have no elapsed duration yet.</p></div>
-          </article>
-        </section>
-
-        <footer class="governance-footer"><span>MODEL PREPARATION ONLY</span><span>Risk rating is set independently by the MLRO in the case system.</span><span>MODEL synthetic-extractor-0.1 · PROMPT ownership-claims-0.1</span></footer>
-      </main>
+      </div>
+      <div class="h-6 w-[1px] bg-outline-variant/60"></div>
+      <div class="relative flex items-center">
+        <span class="material-symbols-outlined absolute left-2 text-on-surface-variant text-[16px]">search</span>
+        <input class="h-8 w-64 bg-surface-container-low pl-7 pr-3 rounded text-xs text-on-surface placeholder-on-surface-variant focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all" placeholder="Search LEI, Dossier ID, UBO entity..." type="text"/>
+      </div>
+      <div class="flex items-center gap-1.5 bg-surface-container px-2.5 py-1 rounded text-xs">
+        <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Active File:</span>
+        <span class="font-mono text-xs text-on-surface font-semibold" id="header-file-id">#KYC-94021</span>
+        <span class="text-xs text-on-surface-variant font-medium truncate max-w-[200px]" id="header-entity-name">Apex Maritime Holdings Ltd</span>
+      </div>
     </div>
 
-    <dialog id="edit-dialog">
-      <form method="dialog" id="edit-form">
-        <div class="dialog-heading"><div><span class="eyebrow">ANALYST CORRECTION</span><h2>Edit claim fields</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
-        <input type="hidden" name="claimId">
-        <label>Owner<input name="owner" required></label>
-        <div class="form-grid"><label>Ownership percentage<input name="percentage" type="number" min="0.0001" max="100" step="0.0001" required></label><label>Owner type<select name="ownerType"><option value="person">Natural person</option><option value="entity">Legal entity</option><option value="unresolved">Unresolved</option></select></label></div>
-        <label>Target entity<input name="targetEntity" required></label>
-        <label>Control basis<input name="controlBasis" required></label>
-        <label>Reason for correction<textarea name="reason" rows="3" required></textarea></label>
-        <div class="dialog-actions"><button class="button button-secondary" value="cancel">Cancel</button><button class="button button-primary" value="save" id="save-edit">Save edited fields</button></div>
-      </form>
-    </dialog>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5 bg-surface-container-high px-2.5 py-1 rounded text-xs font-semibold">
+        <span class="material-symbols-outlined text-secondary text-[14px]">verified</span>
+        <span class="text-[10px] uppercase tracking-wider text-on-surface">Statutory Audit: In Review</span>
+      </div>
+      <div class="flex items-center gap-1 bg-surface-container-low px-2 py-1 rounded text-xs">
+        <span class="material-symbols-outlined text-outline text-[14px]">schedule</span>
+        <span class="font-mono text-[11px] text-on-surface-variant" id="utc-clock">--:--:-- UTC</span>
+      </div>
+      <div class="h-6 w-[1px] bg-outline-variant/60"></div>
+      <div class="flex items-center gap-2 pl-1">
+        <div class="flex flex-col text-right">
+          <span class="text-xs font-semibold text-on-surface leading-tight">Sarah Chen</span>
+          <span class="font-mono text-[10px] text-on-surface-variant">AC-8821 · Snr Analyst</span>
+        </div>
+        <div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs shadow-sm">
+          SC
+        </div>
+      </div>
+    </div>
+  </header>
 
-    <script type="module" src="/app.js"></script>
-  </body>
+  <!-- APP SHELL CONTAINER -->
+  <div class="flex flex-1 pt-14">
+    <!-- LEFT SIDEBAR NAVIGATION -->
+    <aside class="fixed left-0 top-14 bottom-0 w-64 bg-surface-container-lowest z-40 shadow-[0_1px_8px_rgba(0,0,0,0.04)] flex flex-col justify-between py-4 border-r border-outline-variant/30">
+      <div class="flex flex-col gap-3">
+        <div class="px-4">
+          <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Analytical Modules</span>
+        </div>
+        <nav class="flex flex-col gap-1 px-2" id="sidebar-nav">
+          <button class="nav-btn active flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left" data-view="ownership">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">account_tree</span>Ownership Map &amp; Hierarchy</span>
+          </button>
+          <button class="nav-btn flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left" data-view="review">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">fact_check</span>Field Review Queue</span>
+            <span id="nav-unverified-pill" class="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-container font-mono font-bold text-on-surface">0</span>
+          </button>
+          <button class="nav-btn flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left" data-view="judgment">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">gavel</span>Judgment Queue</span>
+            <span id="nav-flags-pill" class="text-[10px] px-1.5 py-0.5 rounded-full bg-error-container text-on-error-container font-mono font-bold">0</span>
+          </button>
+          <button class="nav-btn flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left" data-view="mlro">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">security</span>MLRO Governance Boundary</span>
+            <span class="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 font-bold uppercase">Locked</span>
+          </button>
+          <button class="nav-btn flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left" data-view="audit">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">history_edu</span>Append-Only Audit Log</span>
+            <span id="nav-audit-pill" class="text-[10px] px-1.5 py-0.5 rounded-full bg-surface-container font-mono text-on-surface">0</span>
+          </button>
+          <button class="nav-btn flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left" data-view="pilot">
+            <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">speed</span>QA &amp; Pilot Benchmarks</span>
+          </button>
+        </nav>
+      </div>
+
+      <!-- FOOTER ENFORCER METRICS -->
+      <div class="flex flex-col gap-2 px-3">
+        <div class="p-2.5 bg-surface-container rounded-lg flex flex-col gap-1 border border-outline-variant/30">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-bold text-on-surface uppercase tracking-wider">Boundary Enforcer</span>
+            <span class="material-symbols-outlined text-[14px] text-primary">lock</span>
+          </div>
+          <p class="font-mono text-[10px] text-on-surface-variant leading-tight">ISO-20022 / FATF R.24 Compliant Hash Verified</p>
+        </div>
+        <div class="flex items-center justify-between pt-2 border-t border-outline-variant/40 text-[10px] font-mono text-on-surface-variant px-1">
+          <span>SESSION: 0x9B44F</span>
+          <span class="font-bold text-primary">SEC-LVL 4</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN INTERACTIVE CONTENT AREA -->
+    <main class="ml-64 flex-1 flex flex-col p-4 gap-4 overflow-y-auto">
+      
+      <!-- STATUTORY TOP STATUS & REASONING CONTROL RIBBON -->
+      <section class="w-full bg-surface-container-lowest rounded-xl shadow-sm p-3.5 border border-outline-variant/30 flex flex-col gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <!-- Target Metadata & Jurisdiction Identity -->
+          <div class="flex items-center gap-3">
+            <div class="flex items-center justify-center w-10 h-10 bg-primary-container text-on-primary rounded-lg shadow-sm">
+              <span class="material-symbols-outlined text-[22px] text-cyan-400">corporate_fare</span>
+            </div>
+            <div class="flex flex-col">
+              <div class="flex items-center gap-2">
+                <span class="text-base font-bold text-on-surface" id="hero-entity-name">Apex Maritime Holdings Ltd</span>
+                <span class="bg-surface-container-high px-1.5 py-0.5 rounded font-mono text-[11px] text-on-surface font-semibold">CRN: #10842911</span>
+                <span class="bg-surface-container px-1.5 py-0.5 rounded text-[10px] font-bold text-on-surface-variant uppercase">England &amp; Wales</span>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-on-surface-variant mt-0.5">
+                <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Statutory Frame: <strong class="text-on-surface font-semibold">UK PSC Act 2016 &amp; FATF R.24 (<span id="threshold-display">25.0</span>% Threshold)</strong></span>
+                <span>•</span>
+                <span class="font-mono text-[11px]">LEI: 213800K91PT9V2XZ7144</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Action & Recalculate Controls -->
+          <div class="flex items-center gap-2">
+            <button id="btn-recalc" class="flex items-center gap-1.5 px-3 h-8 bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-semibold rounded-md border border-outline-variant/30 transition-all">
+              <span class="material-symbols-outlined text-[16px] text-primary">sync</span>
+              <span>Recalculate</span>
+            </button>
+            <label class="flex items-center gap-1.5 px-3 h-8 bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-semibold rounded-md border border-outline-variant/30 cursor-pointer transition-all">
+              <span class="material-symbols-outlined text-[16px] text-primary">upload_file</span>
+              <span>Upload Document</span>
+              <input id="file-upload-input" type="file" accept=".txt,text/plain" class="hidden"/>
+            </label>
+            <button id="btn-open-paste-modal" class="flex items-center gap-1.5 px-3 h-8 bg-surface-container-low hover:bg-surface-container text-on-surface text-xs font-semibold rounded-md border border-outline-variant/30 transition-all">
+              <span class="material-symbols-outlined text-[16px]">edit_document</span>
+              <span>Paste Register</span>
+            </button>
+            <button id="btn-goto-queue" class="flex items-center gap-1.5 px-3.5 h-8 bg-primary hover:bg-neutral-800 text-on-primary text-xs font-semibold rounded-md shadow-sm transition-all ml-1">
+              <span class="material-symbols-outlined text-[16px] text-amber-300">verified_user</span>
+              <span>Confirm Queue (<span id="btn-queue-count">0</span> Pending)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Forensic Metric HUD Cards -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-1 border-t border-outline-variant/20">
+          <div class="bg-surface-container-low px-3 py-2 rounded-lg flex items-center justify-between border border-outline-variant/20">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Indexed Documents</span>
+              <span class="text-sm font-bold text-on-surface" id="hud-doc-count">0 Files</span>
+            </div>
+            <div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface">
+              <span class="material-symbols-outlined text-[18px]">description</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-low px-3 py-2 rounded-lg flex items-center justify-between border border-outline-variant/20">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Qualifying UBOs (≥<span id="hud-threshold">25</span>%)</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-sm font-bold text-on-surface" id="hud-ubo-count">0 Persons</span>
+                <span class="font-mono text-[10px] text-emerald-700 font-semibold bg-emerald-50 px-1 rounded">Confirmed</span>
+              </div>
+            </div>
+            <div class="w-8 h-8 rounded bg-surface-container-high flex items-center justify-center text-emerald-700">
+              <span class="material-symbols-outlined text-[18px]">verified</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container-low px-3 py-2 rounded-lg flex items-center justify-between border border-outline-variant/20">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Unverified Fields</span>
+              <div class="flex items-baseline gap-1">
+                <span class="text-sm font-bold text-amber-600" id="hud-unverified-count">0 Fields</span>
+                <span class="font-mono text-[10px] text-on-surface-variant">Pre-filled</span>
+              </div>
+            </div>
+            <div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-amber-600">
+              <span class="material-symbols-outlined text-[18px]">pending_actions</span>
+            </div>
+          </div>
+
+          <div id="hud-flag-card" class="bg-surface-container-low px-3 py-2 rounded-lg flex items-center justify-between border border-outline-variant/20 transition-all">
+            <div class="flex flex-col">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Judgment Queue Flags</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-sm font-bold text-on-surface" id="hud-flags-count">0 Flags</span>
+                <span class="font-mono text-[10px] text-error font-bold" id="hud-flags-badge">CLEARED</span>
+              </div>
+            </div>
+            <div class="w-8 h-8 rounded bg-surface-container flex items-center justify-center text-on-surface" id="hud-flags-icon">
+              <span class="material-symbols-outlined text-[18px]">check_circle</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 1: OWNERSHIP MAP & CITED EVIDENCE WORKBENCH (DEFAULT VIEW) -->
+      <section id="view-ownership" class="view-panel flex flex-col gap-4">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- LEFT & CENTER: OWNERSHIP HIERARCHY & DETERMINISTIC MULTI-LAYER MATH (8 of 12) -->
+          <div class="lg:col-span-8 flex flex-col gap-3">
+            
+            <!-- Target Entity Core Anchor -->
+            <div class="bg-surface-container-lowest p-3 rounded-xl shadow-sm border border-outline-variant/30 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary flex items-center justify-center shadow-sm">
+                  <span class="material-symbols-outlined text-[22px] text-cyan-400">account_balance</span>
+                </div>
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">TARGET DOSSIER UNDER STATUTORY REVIEW</span>
+                    <span class="bg-surface-container px-1.5 py-0.2 rounded font-mono text-[10px] font-bold text-on-surface">TOTAL ISSUED CAPITAL: 1,000,000 GBP ORD</span>
+                  </div>
+                  <span class="text-base font-bold text-on-surface" id="tree-target-name">Apex Maritime Holdings Ltd</span>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold text-on-surface-variant uppercase">Ownership Threshold:</span>
+                <select id="threshold-select" class="bg-surface-container-high px-2 py-1 rounded font-mono text-xs font-bold text-on-surface border border-outline-variant/30 focus:outline-none">
+                  <option value="25">25.0% (Standard FATF/UK)</option>
+                  <option value="10">10.0% (High-Risk/PEP)</option>
+                  <option value="5">5.0% (Strict Sanctions)</option>
+                  <option value="50">50.0% (Controlling Interest)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- DYNAMIC OWNERSHIP CLAIMS LIST / BRANCH CARDS -->
+            <div id="tree-branches-container" class="flex flex-col gap-3">
+              <!-- Dynamically populated by app.js -->
+            </div>
+
+            <!-- CONFIRMED QUALIFYING UBOS SUMMARY CARD -->
+            <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-3.5 flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-emerald-700 text-[18px]">verified</span>
+                  <span class="text-xs font-bold text-on-surface uppercase tracking-wider">Confirmed Statutory Ultimate Beneficial Owners (UBO)</span>
+                </div>
+                <span class="text-[10px] font-mono text-on-surface-variant">Automated Graph Resolution</span>
+              </div>
+              <div id="confirmed-owners-container" class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <!-- Dynamically populated by app.js -->
+              </div>
+            </div>
+
+          </div>
+
+          <!-- RIGHT: 1-CLICK INSTANT DOCUMENT CITATION & SOURCE VIEWER (4 of 12) -->
+          <div class="lg:col-span-4 flex flex-col gap-3">
+            <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 flex flex-col h-full overflow-hidden">
+              
+              <!-- Inspector Header -->
+              <div class="bg-surface-container-low px-3.5 py-2.5 flex items-center justify-between border-b border-outline-variant/30">
+                <div class="flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-primary text-[18px]">find_in_page</span>
+                  <span class="text-xs font-bold text-on-surface">Cited Document Dossier &amp; Page Viewer</span>
+                </div>
+                <span class="bg-primary text-on-primary px-1.5 py-0.5 rounded font-mono text-[10px] font-bold" id="doc-tab-count">1 AUDITED FILE</span>
+              </div>
+
+              <!-- Document Tab Navigation -->
+              <div class="bg-surface-container px-2 py-1 flex items-center gap-1 overflow-x-auto border-b border-outline-variant/20" id="document-tabs">
+                <!-- Dynamically populated by app.js -->
+              </div>
+
+              <!-- Document Body Container -->
+              <div class="p-3 flex-1 flex flex-col gap-2.5 bg-surface-container-low">
+                <!-- Document Header Metadata Bar -->
+                <div class="bg-surface-container-lowest p-2.5 rounded-lg border border-outline-variant/20 flex items-center justify-between text-xs">
+                  <div class="flex flex-col min-w-0 pr-2">
+                    <span class="font-bold text-on-surface truncate" id="viewer-doc-title">No document selected</span>
+                    <span class="font-mono text-[10px] text-on-surface-variant truncate" id="viewer-doc-hash">SHA256: --</span>
+                  </div>
+                  <span class="bg-surface-container-high px-1.5 py-0.5 rounded font-mono text-[10px] text-on-surface font-bold whitespace-nowrap">DETERMINISTIC</span>
+                </div>
+
+                <!-- Document Interactive Lines Container -->
+                <div class="relative bg-surface-container-lowest rounded-lg border border-outline-variant/30 shadow-inner p-3 overflow-hidden flex flex-col gap-2 min-h-[380px] select-text">
+                  <!-- Header stamp -->
+                  <div class="flex items-center justify-between pb-1 border-b border-outline-variant/20 text-[10px] font-mono text-on-surface-variant">
+                    <span class="font-bold text-primary flex items-center gap-1"><span class="material-symbols-outlined text-[13px]">verified</span>REGISTRAR CERTIFIED EXTRACT</span>
+                    <span id="viewer-line-count">0 lines indexed</span>
+                  </div>
+
+                  <!-- Source lines rendered here -->
+                  <div id="viewer-lines-container" class="flex-1 font-mono text-[11px] leading-relaxed text-on-surface overflow-y-auto max-h-[340px] pr-1 flex flex-col gap-1">
+                    <div class="text-center text-on-surface-variant py-8">Select a claim to inspect its cited source line.</div>
+                  </div>
+
+                  <!-- Page Navigator / Citation Footer -->
+                  <div class="pt-2 border-t border-outline-variant/20 flex items-center justify-between text-[11px] font-mono text-on-surface-variant">
+                    <span>Active line: <strong id="active-line-indicator" class="text-on-surface">None</strong></span>
+                    <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[12px]">check</span> Exact Quote Matched
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Quick Action Bar for Cited Line -->
+                <div class="bg-surface-container-lowest p-2 rounded-lg border border-outline-variant/20 flex flex-col gap-1.5">
+                  <div class="flex items-center justify-between text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    <span>Analyst Decision on Selected Claim</span>
+                    <span id="selected-claim-badge" class="font-mono text-primary">SELECT CLAIM</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5">
+                    <button id="quick-accept-btn" class="flex items-center justify-center gap-1 py-1.5 px-2 bg-primary hover:bg-neutral-800 text-on-primary rounded text-xs font-semibold transition-colors disabled:opacity-40" disabled>
+                      <span class="material-symbols-outlined text-[14px]">check</span>
+                      <span>Accept</span>
+                    </button>
+                    <button id="quick-edit-btn" class="flex items-center justify-center gap-1 py-1.5 px-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded text-xs font-semibold border border-outline-variant/30 transition-colors disabled:opacity-40" disabled>
+                      <span class="material-symbols-outlined text-[14px]">edit</span>
+                      <span>Edit</span>
+                    </button>
+                    <button id="quick-flag-btn" class="flex items-center justify-center gap-1 py-1.5 px-2 bg-surface-container hover:bg-error-container text-error rounded text-xs font-semibold border border-outline-variant/30 transition-colors disabled:opacity-40" disabled>
+                      <span class="material-symbols-outlined text-[14px]">flag</span>
+                      <span>Escalate</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 2: FIELD REVIEW QUEUE -->
+      <section id="view-review" class="view-panel hidden flex flex-col gap-3">
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-4 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Field-by-Field Verification Queue</span>
+              <h2 class="text-base font-bold text-on-surface">Analyst Field Confirmations &amp; Decision State Machine</h2>
+            </div>
+            <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-md font-bold" id="review-pending-badge">0 Pending</span>
+          </div>
+          <p class="text-xs text-on-surface-variant leading-relaxed">
+            Every field moves through an audited state machine: <span class="font-mono font-semibold">pre-filled → accepted | edited | rejected | escalated</span>. Every state change writes an append-only event with analyst ID, original value, new value, and reason.
+          </p>
+          <div id="review-cards-list" class="flex flex-col gap-3 mt-1">
+            <!-- Dynamically populated by app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 3: JUDGMENT QUEUE -->
+      <section id="view-judgment" class="view-panel hidden flex flex-col gap-3">
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-4 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold text-error uppercase tracking-wider">Human Judgment Required</span>
+              <h2 class="text-base font-bold text-on-surface">Flagged Items &amp; Compliance Boundary Interceptions</h2>
+            </div>
+            <span class="text-xs font-mono bg-error-container text-on-error-container px-2.5 py-1 rounded-md font-bold" id="judgment-queue-badge">0 Flags</span>
+          </div>
+          <p class="text-xs text-on-surface-variant leading-relaxed">
+            Flagged items are quarantined from standard confirmation until a human analyst provides a reasoned resolution. Conflicting percentages across documents, broken corporate lineage, or nominee arrangements are held here.
+          </p>
+          <div id="judgment-cards-list" class="flex flex-col gap-3 mt-1">
+            <!-- Dynamically populated by app.js -->
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 4: MLRO HANDOFF & GOVERNANCE BOUNDARY -->
+      <section id="view-mlro" class="view-panel hidden flex flex-col gap-4">
+        <!-- Top Governance Dossier Verification Banner -->
+        <div class="bg-surface-container-lowest rounded-xl p-4 shadow-sm border border-outline-variant/30 flex flex-col gap-3">
+          <div class="flex items-start gap-3">
+            <div class="p-2 rounded-lg bg-emerald-100 text-emerald-800 flex-shrink-0 mt-0.5">
+              <span class="material-symbols-outlined text-[20px]">verified</span>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center justify-between gap-2 mb-1">
+                <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Handoff Readiness</span>
+                <span class="font-mono text-[11px] px-2 py-0.5 rounded bg-surface-container-high font-bold text-on-surface">AC-8821 READY</span>
+              </div>
+              <p class="text-xs text-on-surface leading-tight mb-2">
+                All beneficial ownership and control claims prepared for read-only case system handoff.
+              </p>
+              <div class="grid grid-cols-2 gap-2 pt-1 max-w-sm">
+                <div class="bg-surface-container-low rounded-lg p-2 flex items-center justify-between border border-outline-variant/20">
+                  <span class="text-[10px] font-bold text-on-surface-variant uppercase">Analyst Time</span>
+                  <span class="font-mono text-xs text-on-surface font-semibold">8.4m <span class="text-on-surface-variant text-[10px] font-normal">(vs 24m)</span></span>
+                </div>
+                <div class="bg-surface-container-low rounded-lg p-2 flex items-center justify-between border border-outline-variant/20">
+                  <span class="text-[10px] font-bold text-on-surface-variant uppercase">Efficiency</span>
+                  <span class="font-mono text-xs font-semibold text-emerald-700">+65.0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STRICT RISK BOUNDARY SECTION -->
+        <section class="bg-primary-container text-on-primary rounded-xl overflow-hidden shadow-md border border-neutral-700">
+          <div class="h-1.5 w-full bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600"></div>
+          <div class="p-4 flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-surface-container-highest/20 flex items-center justify-center text-amber-400 flex-shrink-0">
+                  <span class="material-symbols-outlined text-[19px]">lock</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-amber-300 block tracking-widest uppercase">Statutory Gatekeeping</span>
+                  <h2 class="text-sm font-bold text-on-primary">RISK RATING: UNASSIGNED (OUT OF SYSTEM SCOPE)</h2>
+                </div>
+              </div>
+              <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 uppercase font-bold tracking-tight">
+                PENDING MLRO
+              </span>
+            </div>
+
+            <div class="bg-neutral-900/90 rounded-lg p-3 border border-neutral-700 flex items-start gap-2.5">
+              <span class="material-symbols-outlined text-amber-400 text-[18px] flex-shrink-0 mt-0.5">shield</span>
+              <p class="text-xs text-neutral-300 leading-relaxed">
+                <strong class="text-white">MANDATORY GOVERNANCE RULE:</strong> The Ownership Intelligence Assistant does <span class="underline decoration-amber-400 font-semibold text-amber-300">NOT</span> calculate, suggest, or write risk ratings. Risk classification (<span class="font-mono text-[11px]">Low / Med / High / PEP / Prohibited</span>) is exclusively reserved for the statutory MLRO in the external case management system.
+              </p>
+            </div>
+
+            <!-- Read-only Confirmed Ownership Export Snapshot -->
+            <div class="flex flex-col gap-2 pt-1">
+              <span class="text-[10px] font-bold text-on-primary-container uppercase tracking-wider">Confirmed Ownership Record Payload (Read-Only)</span>
+              <div class="bg-neutral-950 p-3 rounded-lg font-mono text-[11px] text-emerald-400 max-h-48 overflow-y-auto border border-neutral-800" id="mlro-json-payload">
+                Loading confirmed record...
+              </div>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <!-- VIEW 5: APPEND-ONLY AUDIT LOG -->
+      <section id="view-audit" class="view-panel hidden flex flex-col gap-3">
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-4 flex flex-col gap-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Immutable Governance Store</span>
+              <h2 class="text-base font-bold text-on-surface">PostgreSQL Append-Only Audit Log</h2>
+            </div>
+            <span class="text-xs font-mono bg-surface-container px-2.5 py-1 rounded-md font-bold" id="audit-total-badge">0 Events</span>
+          </div>
+          <p class="text-xs text-on-surface-variant leading-relaxed">
+            All transitions, analyst corrections, seeded cases, and flag resolutions are strictly enforced by the PostgreSQL trigger <span class="font-mono font-semibold">prevent_audit_mutation()</span>. Updates and deletions are forbidden.
+          </p>
+
+          <div class="overflow-x-auto rounded-lg border border-outline-variant/30">
+            <table class="w-full text-left text-xs font-mono">
+              <thead class="bg-surface-container-low text-on-surface-variant text-[10px] uppercase tracking-wider border-b border-outline-variant/30">
+                <tr>
+                  <th class="py-2.5 px-3 font-bold">Timestamp (UTC)</th>
+                  <th class="py-2.5 px-3 font-bold">Event Type</th>
+                  <th class="py-2.5 px-3 font-bold">Field</th>
+                  <th class="py-2.5 px-3 font-bold">Analyst</th>
+                  <th class="py-2.5 px-3 font-bold">Details / Reason</th>
+                </tr>
+              </thead>
+              <tbody id="audit-table-body" class="divide-y divide-outline-variant/20">
+                <!-- Dynamically populated by app.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- VIEW 6: QA & PILOT BENCHMARKS -->
+      <section id="view-pilot" class="view-panel hidden flex flex-col gap-3">
+        <div class="bg-surface-container-lowest rounded-xl shadow-sm border border-outline-variant/30 p-4 flex flex-col gap-4">
+          <div>
+            <span class="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">Quality Assurance &amp; Efficiency Measure</span>
+            <h2 class="text-base font-bold text-on-surface">Pilot Productivity &amp; Correction Benchmarks</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div class="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20 flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase">Total Audit Events</span>
+              <span class="text-xl font-bold text-on-surface font-mono" id="pilot-total-events">0</span>
+              <span class="text-[10px] text-on-surface-variant">Captured in immutable log</span>
+            </div>
+            <div class="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20 flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase">Field Corrections</span>
+              <span class="text-xl font-bold text-on-surface font-mono" id="pilot-corrections-count">0</span>
+              <span class="text-[10px] text-on-surface-variant">Analyst edits on pre-fills</span>
+            </div>
+            <div class="bg-surface-container-low p-3.5 rounded-lg border border-outline-variant/20 flex flex-col gap-1">
+              <span class="text-[10px] font-bold text-on-surface-variant uppercase">Pilot Efficiency Gain</span>
+              <span class="text-xl font-bold text-emerald-700 font-mono">+65%</span>
+              <span class="text-[10px] text-on-surface-variant">Avg 8.4 min vs 24 min manual</span>
+            </div>
+          </div>
+
+          <div class="bg-surface-container p-3 rounded-lg text-xs text-on-surface-variant leading-relaxed">
+            <strong class="text-on-surface">Prototype Verification Standard:</strong> Under this design, the AI assistant functions as a preparation tool. The 14-week model validation cycle is not triggered because risk classifications are completely externalized and model/prompt versions are pinned and audited (<span class="font-mono">synthetic-extractor-0.1 · ownership-claims-0.1</span>).
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- PERSISTENT SOVEREIGN MLRO BOUNDARY BAR -->
+  <footer class="w-full bg-primary-container text-on-primary px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md z-30 border-t border-neutral-700 mt-auto">
+    <div class="flex items-center gap-3">
+      <div class="w-7 h-7 rounded bg-surface-container-low text-on-surface flex items-center justify-center flex-shrink-0">
+        <span class="material-symbols-outlined text-[17px]">lock</span>
+      </div>
+      <div class="flex flex-col">
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-bold text-on-primary uppercase tracking-wide">STATUTORY BOUNDARY ENFORCEMENT &amp; DISCLOSURE SIGN-OFF</span>
+          <span class="bg-surface-container-low text-on-surface font-mono text-[9px] px-1.5 py-0.2 rounded font-bold">2-PERSON INTEGRITY MANDATE</span>
+        </div>
+        <p class="font-mono text-[10px] text-on-primary-container">
+          Filing Hash: SHA-512::9100fa1b774d... Apex Maritime Holdings Ltd KYC-94021. Certified under FATF R.24 rules.
+        </p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="flex flex-col text-right">
+        <span class="text-[9px] font-bold text-on-primary-container uppercase">MLRO Authorization Key</span>
+        <span class="font-mono text-[10px] text-on-primary">CERT-PKI::AUTH-SEC4</span>
+      </div>
+      <button id="btn-release-registry" class="px-3 h-7 bg-surface-container-lowest hover:bg-surface-container text-primary text-xs font-bold rounded shadow-sm transition-colors whitespace-nowrap">
+        Release to Case System
+      </button>
+    </div>
+  </footer>
+
+  <!-- EDIT CLAIM MODAL DIALOG -->
+  <dialog id="edit-modal" class="backdrop:bg-black/60 rounded-xl p-0 shadow-2xl border border-outline-variant/40 max-w-lg w-full bg-surface-container-lowest overflow-hidden">
+    <div class="bg-primary-container px-4 py-3 flex items-center justify-between text-on-primary">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-cyan-400">edit_note</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider">Analyst Correction on Claim Field</h3>
+      </div>
+      <button id="btn-close-edit-modal" class="text-on-primary hover:text-red-400 transition-colors text-lg font-bold leading-none">×</button>
+    </div>
+    <form id="edit-claim-form" class="p-4 flex flex-col gap-3 text-xs">
+      <input type="hidden" id="edit-claim-id"/>
+      <input type="hidden" id="edit-field-name"/>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-on-surface-variant uppercase">Target Field Being Corrected</label>
+        <span id="edit-field-label" class="font-mono text-xs font-bold text-primary bg-surface-container px-2 py-1 rounded">field</span>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-[10px] font-bold text-on-surface-variant uppercase">Original Value</label>
+        <span id="edit-original-value" class="font-mono text-xs text-on-surface bg-surface-container-low px-2 py-1 rounded">original</span>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="edit-new-value-input" class="text-[10px] font-bold text-on-surface-variant uppercase">New Value *</label>
+        <input id="edit-new-value-input" class="h-8 px-2.5 rounded border border-outline-variant focus:outline-none focus:ring-1 focus:ring-primary font-mono text-xs text-on-surface" required/>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="edit-reason-input" class="text-[10px] font-bold text-on-surface-variant uppercase">Mandatory Reason for Correction *</label>
+        <textarea id="edit-reason-input" rows="3" class="p-2 rounded border border-outline-variant focus:outline-none focus:ring-1 focus:ring-primary text-xs text-on-surface" placeholder="Explain the documentary basis for this change..." required></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30 mt-1">
+        <button type="button" id="btn-cancel-edit" class="px-3 h-8 rounded text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 h-8 rounded text-xs font-semibold bg-primary hover:bg-neutral-800 text-on-primary shadow-sm transition-colors">
+          Save to Immutable Audit Store
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- PASTE SYNTHETIC REGISTER MODAL -->
+  <dialog id="paste-modal" class="backdrop:bg-black/60 rounded-xl p-0 shadow-2xl border border-outline-variant/40 max-w-lg w-full bg-surface-container-lowest overflow-hidden">
+    <div class="bg-primary-container px-4 py-3 flex items-center justify-between text-on-primary">
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[18px] text-cyan-400">upload_file</span>
+        <h3 class="text-xs font-bold uppercase tracking-wider">Ingest Synthetic Share Register</h3>
+      </div>
+      <button id="btn-close-paste-modal" class="text-on-primary hover:text-red-400 transition-colors text-lg font-bold leading-none">×</button>
+    </div>
+    <form id="paste-register-form" class="p-4 flex flex-col gap-3 text-xs">
+      <div class="flex flex-col gap-1">
+        <label for="paste-filename" class="text-[10px] font-bold text-on-surface-variant uppercase">Document Filename</label>
+        <input id="paste-filename" class="h-8 px-2.5 rounded border border-outline-variant focus:outline-none focus:ring-1 focus:ring-primary text-xs" value="supplemental-shareholder-register.txt" required/>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label for="paste-content" class="text-[10px] font-bold text-on-surface-variant uppercase">Register Lines (Format: <code>Owner holds X% of Entity</code>)</label>
+        <textarea id="paste-content" rows="6" class="p-2 rounded border border-outline-variant font-mono text-[11px] focus:outline-none focus:ring-1 focus:ring-primary leading-relaxed" placeholder="Apex Global Ltd holds 70% of Apex Maritime Holdings Ltd.&#10;Arthur Pendelton holds 100% of Apex Global Ltd." required></textarea>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-outline-variant/30 mt-1">
+        <button type="button" id="btn-cancel-paste" class="px-3 h-8 rounded text-xs font-semibold bg-surface-container hover:bg-surface-container-high text-on-surface transition-colors">
+          Cancel
+        </button>
+        <button type="submit" class="px-4 h-8 rounded text-xs font-semibold bg-primary hover:bg-neutral-800 text-on-primary shadow-sm transition-colors">
+          Parse &amp; Validate Source
+        </button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- ES MODULE CLIENT APPLICATION SCRIPT -->
+  <script type="module" src="/app.js"></script>
+</body>
 </html>
