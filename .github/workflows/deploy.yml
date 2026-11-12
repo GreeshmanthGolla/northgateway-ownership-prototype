@@ -1,0 +1,147 @@
+name: Test and deploy NorthGateWay to Cloud Run
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: northgateway-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'slabspro-slabsuser40' }}
+  GCP_REGION: ${{ vars.GCP_REGION || 'asia-south1' }}
+  ARTIFACT_REPO: northgate-repo
+  CLOUD_RUN_SERVICE: northgateway-ownership
+  CLOUD_SQL_INSTANCE: ${{ vars.CLOUD_SQL_INSTANCE }}
+  DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+  RUNTIME_SERVICE_ACCOUNT: ${{ vars.GCP_RUNTIME_SERVICE_ACCOUNT }}
+  WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+  DB_NAME_SECRET: ${{ vars.DB_NAME_SECRET || 'northgateway-db-name' }}
+  DB_USER_SECRET: ${{ vars.DB_USER_SECRET || 'northgateway-db-user' }}
+  DB_PASSWORD_SECRET: ${{ vars.DB_PASSWORD_SECRET || 'northgateway-db-password' }}
+
+jobs:
+  test:
+    name: Build and test TypeScript application
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Run build and tests
+        run: npm test
+
+  deploy:
+    name: Build and deploy to Cloud Run
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deployment configuration
+        env:
+          PROJECT_ID: ${{ env.GCP_PROJECT_ID }}
+          PROVIDER: ${{ env.WIF_PROVIDER }}
+          DEPLOY_SA: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+          RUNTIME_SA: ${{ env.RUNTIME_SERVICE_ACCOUNT }}
+          SQL_INSTANCE: ${{ env.CLOUD_SQL_INSTANCE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in PROJECT_ID PROVIDER DEPLOY_SA RUNTIME_SA SQL_INSTANCE; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Set the GitHub Actions variable corresponding to $name before deploying."
+              exit 1
+            fi
+          done
+
+      - name: Authenticate to Google Cloud using Workload Identity Federation
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Artifact Registry
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! gcloud artifacts repositories describe "$ARTIFACT_REPO" \
+            --location="$GCP_REGION" \
+            --project="$GCP_PROJECT_ID" >/dev/null 2>&1; then
+            gcloud artifacts repositories create "$ARTIFACT_REPO" \
+              --repository-format=docker \
+              --location="$GCP_REGION" \
+              --description="NorthGateWay ownership prototype images" \
+              --project="$GCP_PROJECT_ID"
+          fi
+          gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push application image
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          image="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT_ID}/${ARTIFACT_REPO}/${CLOUD_RUN_SERVICE}:${GITHUB_SHA}"
+          docker build --pull --tag "$image" .
+          docker push "$image"
+          echo "uri=$image" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy private Cloud Run service
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.CLOUD_RUN_SERVICE }}
+          region: ${{ env.GCP_REGION }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
+          image: ${{ steps.image.outputs.uri }}
+          flags: >-
+            --port=8080
+            --memory=512Mi
+            --cpu=1
+            --min=0
+            --max=5
+            --no-allow-unauthenticated
+            --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE }}
+            --service-account=${{ env.RUNTIME_SERVICE_ACCOUNT }}
+            --set-env-vars=NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${{ env.CLOUD_SQL_INSTANCE }},PGPORT=5432
+            --set-secrets=PGDATABASE=${{ env.DB_NAME_SECRET }}:latest,PGUSER=${{ env.DB_USER_SECRET }}:latest,PGPASSWORD=${{ env.DB_PASSWORD_SECRET }}:latest
+
+      - name: Write deployment summary
+        env:
+          SERVICE_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          {
+            echo "## NorthGateWay deployment"
+            echo ""
+            echo "- **Service:** ${CLOUD_RUN_SERVICE}"
+            echo "- **Region:** ${GCP_REGION}"
+            echo "- **Revision URL:** ${SERVICE_URL}"
+            echo "- **Image:** ${{ steps.image.outputs.uri }}"
+            echo "- **Access:** private (Cloud Run authentication required)"
+          } >> "$GITHUB_STEP_SUMMARY"

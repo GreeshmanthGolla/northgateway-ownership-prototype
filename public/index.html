@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f8f9ff">
+    <title>NorthGateWay | Entity Intelligence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="NorthGateWay home">
+        <span class="brand-mark">N</span>
+        <span><strong>NorthGateWay</strong><small>ENTITY INTELLIGENCE</small></span>
+      </a>
+      <div class="case-chip"><span class="eyebrow">ACTIVE FILE</span><strong id="case-name">KYC-94021 · Apex Maritime Holdings Ltd</strong></div>
+      <div class="user-chip"><span class="status-dot"></span><span>Sarah Chen <small>AC-8821 · Senior Analyst</small></span></div>
+    </header>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-section">
+          <div class="eyebrow">ANALYTICAL MODULES</div>
+          <nav aria-label="Main navigation">
+            <button class="nav-link active" data-view="review"><span class="nav-icon">⌘</span> Ownership map &amp; review</button>
+            <button class="nav-link" data-view="judgment"><span class="nav-icon">△</span> Judgment queue <span id="nav-flag-count" class="nav-count">0</span></button>
+            <button class="nav-link" data-view="audit"><span class="nav-icon">≡</span> Audit trail</button>
+            <button class="nav-link" data-view="confirmed"><span class="nav-icon">✓</span> Confirmed record</button>
+            <button class="nav-link" data-view="pilot"><span class="nav-icon">▥</span> Pilot metrics</button>
+          </nav>
+        </div>
+        <div class="sidebar-foot">
+          <span class="status-dot"></span>
+          <div><strong>Preparation tool</strong><small>No risk rating access</small></div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div id="error-banner" class="error-banner hidden" role="alert"></div>
+        <section class="page-heading">
+          <div>
+            <div class="eyebrow">CORPORATE OWNERSHIP REVIEW <span class="separator">/</span> SYNTHETIC PILOT</div>
+            <h1 id="page-title">Ownership map &amp; review</h1>
+            <p id="page-subtitle">Verify source-backed claims before ownership is confirmed.</p>
+          </div>
+          <div class="heading-actions">
+            <label class="button button-secondary upload-button">
+              <span aria-hidden="true">↑</span> Add text document
+              <input id="upload-input" type="file" accept=".txt,text/plain">
+            </label>
+            <span class="pilot-tag"><i></i> MODEL PREPARATION ONLY</span>
+          </div>
+        </section>
+
+        <section class="metrics-row" aria-label="Case summary">
+          <article class="metric-card"><span class="metric-label">DOCUMENTS</span><strong id="metric-documents">—</strong><small>Current &amp; superseded versions</small></article>
+          <article class="metric-card"><span class="metric-label">UNVERIFIED FIELDS</span><strong id="metric-unverified">—</strong><small>Awaiting analyst confirmation</small></article>
+          <article class="metric-card"><span class="metric-label">JUDGMENT ITEMS</span><strong id="metric-flags">—</strong><small>Require human resolution</small></article>
+          <article class="metric-card"><span class="metric-label">OWNERS ≥ <span id="metric-threshold">25</span>%</span><strong id="metric-owners">—</strong><small>Threshold is configurable</small></article>
+        </section>
+
+        <section id="view-review" class="view-panel">
+          <div class="workspace-grid">
+            <article class="panel ownership-panel">
+              <div class="panel-heading">
+                <div><span class="eyebrow">LAYERED OWNERSHIP</span><h2>Ownership map</h2></div>
+                <span class="quiet-badge">Threshold ≥ <span id="map-threshold">25</span>%</span>
+              </div>
+              <div id="ownership-map" class="ownership-map"></div>
+              <div class="math-note"><span class="math-symbol">ƒ</span><span><strong>Effective ownership</strong><small>Each path is multiplied through the ownership chain. Only verified, unflagged claims appear.</small></span></div>
+              <div class="panel-divider"></div>
+              <div class="source-heading"><div><span class="eyebrow">SOURCE DOCUMENTS</span><h3>Document register</h3></div><span id="doc-count" class="quiet-badge">0 files</span></div>
+              <div id="document-list" class="document-list"></div>
+            </article>
+
+            <article class="panel source-panel">
+              <div class="panel-heading">
+                <div><span class="eyebrow">VERIFIABLE EVIDENCE</span><h2>Source viewer</h2></div>
+                <span id="source-page" class="quiet-badge">Select a claim</span>
+              </div>
+              <div class="source-toolbar"><span class="file-icon">▤</span><span id="source-filename">No source selected</span><span class="mono muted">TEXT INDEX</span></div>
+              <div id="source-lines" class="source-lines"><div class="empty-state">Choose a claim to inspect its cited source line.</div></div>
+              <div class="source-footer"><span class="verified-mark">✓</span> Quote and page/line pointer validated deterministically</div>
+            </article>
+          </div>
+
+          <article class="panel review-panel">
+            <div class="panel-heading review-heading">
+              <div><span class="eyebrow">FIELD VERIFICATION QUEUE</span><h2>Confirm ownership claims</h2></div>
+              <span id="review-count" class="quiet-badge">0 claims</span>
+            </div>
+            <div id="review-list" class="review-list"></div>
+          </article>
+        </section>
+
+        <section id="view-judgment" class="view-panel hidden">
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">HUMAN JUDGMENT REQUIRED</span><h2>Flagged claims</h2></div><span id="judgment-count" class="quiet-badge">0 items</span></div>
+            <p class="panel-intro">Flagged claims are kept out of the standard confirmation list until a reviewer records a reasoned resolution.</p>
+            <div id="judgment-list" class="review-list"></div>
+          </article>
+        </section>
+
+        <section id="view-audit" class="view-panel hidden">
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">APPEND-ONLY EVENT HISTORY</span><h2>Audit trail</h2></div><span id="audit-count" class="quiet-badge">0 events</span></div>
+            <div class="table-wrap"><table><thead><tr><th>TIME</th><th>EVENT</th><th>FIELD</th><th>ANALYST</th><th>CHANGE / REASON</th></tr></thead><tbody id="audit-list"></tbody></table></div>
+          </article>
+        </section>
+
+        <section id="view-confirmed" class="view-panel hidden">
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">READ-ONLY CASE HANDOFF</span><h2>Confirmed ownership record</h2></div><span class="quiet-badge">NO RISK FIELDS</span></div>
+            <p class="panel-intro">This record contains only analyst-confirmed ownership. The service has no risk-rating field and no write path to the case risk assessment.</p>
+            <div id="confirmed-list" class="review-list"></div>
+          </article>
+        </section>
+
+        <section id="view-pilot" class="view-panel hidden">
+          <article class="panel">
+            <div class="panel-heading"><div><span class="eyebrow">QUALITY &amp; GOVERNANCE</span><h2>Pilot metrics</h2></div><span class="quiet-badge">AUDIT-DERIVED</span></div>
+            <p class="panel-intro">Metrics are calculated from document and review events in the audit store—not analyst self-reporting.</p>
+            <div id="pilot-metrics" class="pilot-metrics"></div>
+            <div class="pilot-note"><strong>Synthetic prototype limitation</strong><p>Correction counts are based on edited field events. File duration is measured from the first to last recorded event for each document; cases with only one event have no elapsed duration yet.</p></div>
+          </article>
+        </section>
+
+        <footer class="governance-footer"><span>MODEL PREPARATION ONLY</span><span>Risk rating is set independently by the MLRO in the case system.</span><span>MODEL synthetic-extractor-0.1 · PROMPT ownership-claims-0.1</span></footer>
+      </main>
+    </div>
+
+    <dialog id="edit-dialog">
+      <form method="dialog" id="edit-form">
+        <div class="dialog-heading"><div><span class="eyebrow">ANALYST CORRECTION</span><h2>Edit claim fields</h2></div><button class="icon-button" value="cancel" aria-label="Close">×</button></div>
+        <input type="hidden" name="claimId">
+        <label>Owner<input name="owner" required></label>
+        <div class="form-grid"><label>Ownership percentage<input name="percentage" type="number" min="0.0001" max="100" step="0.0001" required></label><label>Owner type<select name="ownerType"><option value="person">Natural person</option><option value="entity">Legal entity</option><option value="unresolved">Unresolved</option></select></label></div>
+        <label>Target entity<input name="targetEntity" required></label>
+        <label>Control basis<input name="controlBasis" required></label>
+        <label>Reason for correction<textarea name="reason" rows="3" required></textarea></label>
+        <div class="dialog-actions"><button class="button button-secondary" value="cancel">Cancel</button><button class="button button-primary" value="save" id="save-edit">Save edited fields</button></div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

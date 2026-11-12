@@ -1,0 +1,23 @@
+{
+  "name": "northgateway-ownership-intelligence",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Synthetic-data ownership review prototype with source validation and append-only audit history",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "npm run build && node --test dist/domain.test.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "@types/pg": "^8.15.4",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
