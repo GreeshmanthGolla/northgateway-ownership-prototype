@@ -706,6 +706,75 @@ function initModals() {
     render();
   });
 
+  // Auto-Confirm All Claims
+  const autoConfirmBtn = document.getElementById("btn-auto-confirm");
+  autoConfirmBtn?.addEventListener("click", async () => {
+    if (!state || state.claims.length === 0) return;
+    autoConfirmBtn.disabled = true;
+    const originalText = autoConfirmBtn.innerHTML;
+    autoConfirmBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">sync</span> Confirming...';
+    try {
+      for (const claim of state.claims) {
+        if (claim.flags.length === 0) {
+          await api(`/api/claims/${claim.id}/review`, {
+            method: "POST",
+            body: JSON.stringify({ action: "accept", analystId: "AC-8821" }),
+          });
+        }
+      }
+      await refreshState();
+    } catch (err) {
+      alert("Error confirming claims: " + err.message);
+    } finally {
+      autoConfirmBtn.disabled = false;
+      autoConfirmBtn.innerHTML = originalText;
+    }
+  });
+
+  // Backend API Tester Handlers
+  const inspectorLabel = document.getElementById("api-inspector-label");
+  const inspectorJson = document.getElementById("api-inspector-json");
+
+  document.getElementById("btn-test-state")?.addEventListener("click", async () => {
+    inspectorLabel.textContent = "API Response: GET /api/state (HTTP 200 OK)";
+    inspectorJson.textContent = "Fetching...";
+    try {
+      const data = await api("/api/state");
+      inspectorJson.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      inspectorJson.textContent = "Error: " + e.message;
+    }
+  });
+
+  document.getElementById("btn-test-confirmed")?.addEventListener("click", async () => {
+    inspectorLabel.textContent = "API Response: GET /api/confirmed-record (HTTP 200 OK)";
+    inspectorJson.textContent = "Fetching...";
+    try {
+      const data = await api("/api/confirmed-record");
+      inspectorJson.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      inspectorJson.textContent = "Error: " + e.message;
+    }
+  });
+
+  document.getElementById("btn-test-doc-lines")?.addEventListener("click", async () => {
+    if (!activeDocumentId && state.documents.length > 0) activeDocumentId = state.documents[0].id;
+    if (!activeDocumentId) return;
+    inspectorLabel.textContent = `API Response: GET /api/documents/${activeDocumentId}/lines (HTTP 200 OK)`;
+    inspectorJson.textContent = "Fetching...";
+    try {
+      const data = await api(`/api/documents/${encodeURIComponent(activeDocumentId)}/lines`);
+      inspectorJson.textContent = JSON.stringify(data, null, 2);
+    } catch (e) {
+      inspectorJson.textContent = "Error: " + e.message;
+    }
+  });
+
+  document.getElementById("btn-copy-json")?.addEventListener("click", () => {
+    navigator.clipboard?.writeText(inspectorJson.textContent);
+    alert("JSON payload copied to clipboard!");
+  });
+
   // Release to Case System
   document.getElementById("btn-release-registry")?.addEventListener("click", () => {
     alert("Record successfully attested by Analyst AC-8821 and dispatched to the Case Management System for MLRO risk review.");
