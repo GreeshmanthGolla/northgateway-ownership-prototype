@@ -78,7 +78,7 @@ gcloud sql users create northgate_admin --instance=$sqlInstance --password=$dbPa
 function Set-GcpSecret($name, $val) {
     $sec = gcloud secrets describe $name --project=$ProjectId 2>$null
     if (-not $sec) {
-        $val | gcloud secrets create $name --data-file=- --project=$ProjectId
+        $val | gcloud secrets create $name --replication-policy="user-managed" --locations=$Region --data-file=- --project=$ProjectId
     } else {
         $val | gcloud secrets versions add $name --data-file=- --project=$ProjectId
     }

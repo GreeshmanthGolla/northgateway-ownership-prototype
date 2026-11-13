@@ -103,8 +103,12 @@ create_or_update_secret() {
   local name="$1"
   local value="$2"
   if ! gcloud secrets describe "$name" --project="$PROJECT_ID" >/dev/null 2>&1; then
-    echo "--> Creating secret '$name'..."
-    printf "%s" "$value" | gcloud secrets create "$name" --data-file=- --project="$PROJECT_ID"
+    echo "--> Creating secret '$name' in location $REGION..."
+    printf "%s" "$value" | gcloud secrets create "$name" \
+      --replication-policy="user-managed" \
+      --locations="$REGION" \
+      --data-file=- \
+      --project="$PROJECT_ID"
   else
     echo "--> Updating secret '$name'..."
     printf "%s" "$value" | gcloud secrets versions add "$name" --data-file=- --project="$PROJECT_ID"
@@ -151,36 +155,38 @@ done
 
 # 6. Workload Identity Federation for GitHub Actions
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
+WIF_PROVIDER_RESOURCE=""
 
-echo "--> Checking Workload Identity Pool '$WIF_POOL_NAME'..."
+echo "--> Setting up Workload Identity Federation for GitHub Actions..."
 if ! gcloud iam workload-identity-pools describe "$WIF_POOL_NAME" --location="global" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools create "$WIF_POOL_NAME" \
     --location="global" \
     --display-name="GitHub Actions Pool" \
-    --project="$PROJECT_ID"
+    --project="$PROJECT_ID" || echo "--> Note: WIF Pool creation not permitted by org policy; skipping WIF."
 fi
 
-echo "--> Checking Workload Identity Provider '$WIF_PROVIDER_NAME'..."
-if ! gcloud iam workload-identity-pools providers describe "$WIF_PROVIDER_NAME" \
-  --workload-identity-pool="$WIF_POOL_NAME" \
-  --location="global" \
-  --project="$PROJECT_ID" >/dev/null 2>&1; then
-  gcloud iam workload-identity-pools providers create-oidc "$WIF_PROVIDER_NAME" \
+if gcloud iam workload-identity-pools describe "$WIF_POOL_NAME" --location="global" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  if ! gcloud iam workload-identity-pools providers describe "$WIF_PROVIDER_NAME" \
     --workload-identity-pool="$WIF_POOL_NAME" \
     --location="global" \
-    --issuer-uri="https://token.actions.githubusercontent.com" \
-    --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-    --project="$PROJECT_ID"
+    --project="$PROJECT_ID" >/dev/null 2>&1; then
+    gcloud iam workload-identity-pools providers create-oidc "$WIF_PROVIDER_NAME" \
+      --workload-identity-pool="$WIF_POOL_NAME" \
+      --location="global" \
+      --issuer-uri="https://token.actions.githubusercontent.com" \
+      --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
+      --project="$PROJECT_ID" || true
+  fi
+
+  # Allow GitHub Actions repository to impersonate the Deployer Service Account
+  echo "--> Binding WIF to Deployer SA..."
+  gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" \
+    --role="roles/iam.workloadIdentityUser" \
+    --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/attribute.repository/${GITHUB_REPO}" \
+    --project="$PROJECT_ID" >/dev/null 2>&1 || true
+
+  WIF_PROVIDER_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/providers/${WIF_PROVIDER_NAME}"
 fi
-
-# Allow GitHub Actions repository to impersonate the Deployer Service Account
-echo "--> Binding WIF to Deployer SA..."
-gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" \
-  --role="roles/iam.workloadIdentityUser" \
-  --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/attribute.repository/${GITHUB_REPO}" \
-  --project="$PROJECT_ID" >/dev/null
-
-WIF_PROVIDER_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/providers/${WIF_PROVIDER_NAME}"
 
 # 7. Optional Direct Build & Deploy from Cloud Shell
 echo ""
