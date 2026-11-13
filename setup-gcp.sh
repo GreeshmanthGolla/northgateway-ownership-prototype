@@ -14,13 +14,7 @@
 
 set -euo pipefail
 
-# Retrieve existing password if secret already exists
-if gcloud secrets describe "northgateway-db-password" --project="$PROJECT_ID" >/dev/null 2>&1; then
-  EXISTING_PASS=$(gcloud secrets versions access latest --secret="northgateway-db-password" --project="$PROJECT_ID" 2>/dev/null || echo "")
-  if [[ -n "$EXISTING_PASS" ]]; then
-    DB_PASSWORD="$EXISTING_PASS"
-  fi
-fi
+# Configuration Defaults
 PROJECT_ID="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || echo '')}"
 REGION="${GCP_REGION:-asia-south1}"
 ARTIFACT_REPO="northgate-repo"
@@ -38,6 +32,14 @@ RUNTIME_SA_NAME="northgate-runtime"
 if [[ -z "$PROJECT_ID" ]]; then
   echo "Error: PROJECT_ID is not set. Please run: gcloud config set project <YOUR_PROJECT_ID>"
   exit 1
+fi
+
+# Retrieve existing password if secret already exists in Secret Manager
+if gcloud secrets describe "northgateway-db-password" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  EXISTING_PASS=$(gcloud secrets versions access latest --secret="northgateway-db-password" --project="$PROJECT_ID" 2>/dev/null || echo "")
+  if [[ -n "$EXISTING_PASS" ]]; then
+    DB_PASSWORD="$EXISTING_PASS"
+  fi
 fi
 
 echo "=================================================================="
