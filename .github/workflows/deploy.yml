@@ -129,7 +129,7 @@ jobs:
             --no-allow-unauthenticated
             --add-cloudsql-instances=${{ env.CLOUD_SQL_INSTANCE }}
             --service-account=${{ env.RUNTIME_SERVICE_ACCOUNT }}
-            --set-env-vars=NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${{ env.CLOUD_SQL_INSTANCE }},PGPORT=5432
+            --set-env-vars=NODE_ENV=production,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${{ env.CLOUD_SQL_INSTANCE }},PGPORT=5432
             --set-secrets=PGDATABASE=${{ env.DB_NAME_SECRET }}:latest,PGUSER=${{ env.DB_USER_SECRET }}:latest,PGPASSWORD=${{ env.DB_PASSWORD_SECRET }}:latest
 
       - name: Write deployment summary

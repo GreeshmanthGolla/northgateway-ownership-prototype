@@ -219,7 +219,7 @@ if gcloud run deploy "$CLOUD_RUN_SERVICE" \
   --max-instances=5 \
   --allow-unauthenticated \
   --add-cloudsql-instances="$CLOUD_SQL_CONNECTION_NAME" \
-  --set-env-vars="NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432,PGDATABASE=${DB_NAME},PGUSER=${DB_USER},PGPASSWORD=${DB_PASSWORD}" \
+  --set-env-vars="NODE_ENV=production,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432,PGDATABASE=${DB_NAME},PGUSER=${DB_USER},PGPASSWORD=${DB_PASSWORD}" \
   --project="$PROJECT_ID"; then
   SERVICE_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format="value(status.url)")
 else
@@ -235,7 +235,7 @@ else
     --max-instances=5 \
     --no-allow-unauthenticated \
     --add-cloudsql-instances="$CLOUD_SQL_CONNECTION_NAME" \
-    --set-env-vars="NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432,PGDATABASE=${DB_NAME},PGUSER=${DB_USER},PGPASSWORD=${DB_PASSWORD}" \
+    --set-env-vars="NODE_ENV=production,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432,PGDATABASE=${DB_NAME},PGUSER=${DB_USER},PGPASSWORD=${DB_PASSWORD}" \
     --project="$PROJECT_ID"
   SERVICE_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format="value(status.url)")
 fi
