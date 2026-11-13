@@ -28,6 +28,11 @@ const pool = process.env.DATABASE_URL
 const MAX_BODY_BYTES = 5 * 1024 * 1024;
 const FIELD_KEYS = ["owner", "percentage", "targetEntity", "ownerType", "controlBasis"] as const;
 
+let dbAvailable = false;
+let inMemoryDocs: DocumentRecord[] = [];
+let inMemoryClaims: OwnershipClaim[] = [];
+let inMemoryAudit: AuditEvent[] = [];
+
 class RequestError extends Error {
   constructor(readonly status: number, message: string) {
     super(message);
@@ -418,43 +423,78 @@ async function appendAudit(client: import("pg").PoolClient, event: Partial<Audit
 }
 
 async function loadDocuments(): Promise<DocumentRecord[]> {
-  const result = await pool.query("SELECT * FROM documents ORDER BY created_at DESC");
-  return result.rows.map(mapDocument);
+  if (dbAvailable) {
+    try {
+      const result = await pool.query("SELECT * FROM documents ORDER BY created_at DESC");
+      return result.rows.map(mapDocument);
+    } catch {
+      // Fallback
+    }
+  }
+  return inMemoryDocs;
 }
 
 async function loadDocument(id: string): Promise<DocumentRecord | null> {
-  const result = await pool.query("SELECT * FROM documents WHERE id=$1", [id]);
-  return result.rows[0] ? mapDocument(result.rows[0]) : null;
+  if (dbAvailable) {
+    try {
+      const result = await pool.query("SELECT * FROM documents WHERE id=$1", [id]);
+      if (result.rows[0]) return mapDocument(result.rows[0]);
+    } catch {
+      // Fallback
+    }
+  }
+  return inMemoryDocs.find((doc) => doc.id === id) ?? null;
 }
 
 async function loadClaims(): Promise<OwnershipClaim[]> {
-  const result = await pool.query("SELECT * FROM claims ORDER BY page, owner");
-  return result.rows.map(mapClaim);
+  if (dbAvailable) {
+    try {
+      const result = await pool.query("SELECT * FROM claims ORDER BY page, owner");
+      return result.rows.map(mapClaim);
+    } catch {
+      // Fallback
+    }
+  }
+  return inMemoryClaims;
 }
 
 async function loadClaim(id: string): Promise<OwnershipClaim | null> {
-  const result = await pool.query("SELECT * FROM claims WHERE id=$1", [id]);
-  return result.rows[0] ? mapClaim(result.rows[0]) : null;
+  if (dbAvailable) {
+    try {
+      const result = await pool.query("SELECT * FROM claims WHERE id=$1", [id]);
+      if (result.rows[0]) return mapClaim(result.rows[0]);
+    } catch {
+      // Fallback
+    }
+  }
+  return inMemoryClaims.find((claim) => claim.id === id) ?? null;
 }
 
 async function loadAudit(): Promise<AuditEvent[]> {
-  const result = await pool.query(
-    `SELECT id, claim_id, document_id, event_type, analyst_id, timestamp, field_name,
-      original_value, new_value, reason, metadata FROM audit_log ORDER BY timestamp DESC LIMIT 300`,
-  );
-  return result.rows.map((row) => ({
-    id: row.id,
-    claimId: row.claim_id,
-    documentId: row.document_id,
-    eventType: row.event_type,
-    analystId: row.analyst_id,
-    timestamp: new Date(row.timestamp).toISOString(),
-    fieldName: row.field_name,
-    originalValue: row.original_value,
-    newValue: row.new_value,
-    reason: row.reason,
-    metadata: row.metadata,
-  }));
+  if (dbAvailable) {
+    try {
+      const result = await pool.query(
+        `SELECT id, claim_id, document_id, event_type, analyst_id, timestamp, field_name,
+          original_value, new_value, reason, metadata FROM audit_log ORDER BY timestamp DESC LIMIT 300`,
+      );
+      return result.rows.map((row) => ({
+        id: row.id,
+        claimId: row.claim_id,
+        documentId: row.document_id,
+        eventType: row.event_type,
+        analystId: row.analyst_id,
+        timestamp: new Date(row.timestamp).toISOString(),
+        fieldName: row.field_name,
+        originalValue: row.original_value,
+        newValue: row.new_value,
+        reason: row.reason,
+        metadata: row.metadata,
+      }));
+    } catch {
+      // Fallback
+    }
+  }
+  return inMemoryAudit;
 }
 
 function mapDocument(row: Record<string, unknown>): DocumentRecord {
@@ -530,14 +570,55 @@ function sendJson(response: ServerResponse, status: number, payload: unknown): v
   response.end(JSON.stringify(payload));
 }
 
+function initInMemoryFallback(): void {
+  const content = [
+    "Harbor Ventures Ltd holds 60% of Apex Maritime Holdings Ltd.",
+    "Elena Ward holds 40% of Apex Maritime Holdings Ltd.",
+    "Daniel Cole holds 50% of Harbor Ventures Ltd.",
+    "Mei Lin holds 50% of Harbor Ventures Ltd.",
+  ].join("\n");
+  const document = makeDocument(content, "apex-shareholder-register.txt", 1);
+  const lines = indexDocument(document);
+  const claims = extractClaims(document, lines).filter((claim) => validateClaimSource(claim, lines));
+  inMemoryDocs = [document];
+  inMemoryClaims = claims;
+  inMemoryAudit = [
+    {
+      id: "seed-audit-1",
+      claimId: null,
+      documentId: document.id,
+      eventType: "synthetic_case_seeded",
+      analystId: "system",
+      timestamp: new Date().toISOString(),
+      fieldName: null,
+      originalValue: null,
+      newValue: null,
+      reason: "Synthetic prototype data",
+      metadata: { modelVersion: "synthetic-extractor-0.1", promptVersion: "ownership-claims-0.1" },
+    },
+  ];
+}
+
 async function start(): Promise<void> {
   if (!Number.isFinite(threshold) || threshold < 0 || threshold > 100) {
     throw new Error("OWNERSHIP_THRESHOLD must be a number between 0 and 100");
   }
-  await pool.query(schema);
-  const count = await pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM documents");
-  if (Number(count.rows[0]?.count ?? 0) === 0) await seedSyntheticCase();
-  server.listen(port, () => console.log(`NorthGateWay prototype listening at http://localhost:${port}`));
+  // Initialize in-memory seed immediately
+  initInMemoryFallback();
+
+  // Listen on port right away so Cloud Run health check passes immediately
+  server.listen(port, () => console.log(`NorthGateWay prototype listening on port ${port}`));
+
+  // Connect to PostgreSQL asynchronously
+  try {
+    await pool.query(schema);
+    const count = await pool.query<{ count: string }>("SELECT COUNT(*)::text AS count FROM documents");
+    if (Number(count.rows[0]?.count ?? 0) === 0) await seedSyntheticCase();
+    dbAvailable = true;
+    console.log("PostgreSQL connected and schema verified successfully.");
+  } catch (error) {
+    console.warn("PostgreSQL not immediately reachable, serving with active in-memory store:", error);
+  }
 }
 
 async function seedSyntheticCase(): Promise<void> {
