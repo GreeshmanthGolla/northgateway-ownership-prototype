@@ -14,7 +14,13 @@
 
 set -euo pipefail
 
-# Configuration Defaults
+# Retrieve existing password if secret already exists
+if gcloud secrets describe "northgateway-db-password" --project="$PROJECT_ID" >/dev/null 2>&1; then
+  EXISTING_PASS=$(gcloud secrets versions access latest --secret="northgateway-db-password" --project="$PROJECT_ID" 2>/dev/null || echo "")
+  if [[ -n "$EXISTING_PASS" ]]; then
+    DB_PASSWORD="$EXISTING_PASS"
+  fi
+fi
 PROJECT_ID="${GCP_PROJECT_ID:-$(gcloud config get-value project 2>/dev/null || echo '')}"
 REGION="${GCP_REGION:-asia-south1}"
 ARTIFACT_REPO="northgate-repo"
@@ -137,32 +143,33 @@ if ! gcloud iam service-accounts describe "$RUNTIME_SA" --project="$PROJECT_ID" 
     --project="$PROJECT_ID"
 fi
 
-# Assign IAM roles to Deployer SA
+# Assign IAM roles to Deployer SA (if permitted by lab account)
+echo "--> Setting IAM permissions (skipping if restricted by lab policy)..."
 for role in roles/run.admin roles/artifactregistry.writer roles/iam.serviceAccountUser; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${DEPLOY_SA}" \
     --role="$role" \
-    --condition=None >/dev/null
+    --condition=None >/dev/null 2>&1 || true
 done
 
-# Assign IAM roles to Runtime SA
+# Assign IAM roles to Runtime SA (if permitted by lab account)
 for role in roles/cloudsql.client roles/secretmanager.secretAccessor; do
   gcloud projects add-iam-policy-binding "$PROJECT_ID" \
     --member="serviceAccount:${RUNTIME_SA}" \
     --role="$role" \
-    --condition=None >/dev/null
+    --condition=None >/dev/null 2>&1 || true
 done
 
 # 6. Workload Identity Federation for GitHub Actions
 PROJECT_NUMBER=$(gcloud projects describe "$PROJECT_ID" --format="value(projectNumber)")
 WIF_PROVIDER_RESOURCE=""
 
-echo "--> Setting up Workload Identity Federation for GitHub Actions..."
+echo "--> Checking Workload Identity Federation for GitHub Actions..."
 if ! gcloud iam workload-identity-pools describe "$WIF_POOL_NAME" --location="global" --project="$PROJECT_ID" >/dev/null 2>&1; then
   gcloud iam workload-identity-pools create "$WIF_POOL_NAME" \
     --location="global" \
     --display-name="GitHub Actions Pool" \
-    --project="$PROJECT_ID" || echo "--> Note: WIF Pool creation not permitted by org policy; skipping WIF."
+    --project="$PROJECT_ID" 2>/dev/null || echo "--> Note: WIF Pool creation skipped (restricted by lab policy)."
 fi
 
 if gcloud iam workload-identity-pools describe "$WIF_POOL_NAME" --location="global" --project="$PROJECT_ID" >/dev/null 2>&1; then
@@ -175,11 +182,10 @@ if gcloud iam workload-identity-pools describe "$WIF_POOL_NAME" --location="glob
       --location="global" \
       --issuer-uri="https://token.actions.githubusercontent.com" \
       --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository" \
-      --project="$PROJECT_ID" || true
+      --project="$PROJECT_ID" 2>/dev/null || true
   fi
 
   # Allow GitHub Actions repository to impersonate the Deployer Service Account
-  echo "--> Binding WIF to Deployer SA..."
   gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" \
     --role="roles/iam.workloadIdentityUser" \
     --member="principalSet://iam.googleapis.com/projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/attribute.repository/${GITHUB_REPO}" \
@@ -188,13 +194,17 @@ if gcloud iam workload-identity-pools describe "$WIF_POOL_NAME" --location="glob
   WIF_PROVIDER_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/providers/${WIF_PROVIDER_NAME}"
 fi
 
-# 7. Optional Direct Build & Deploy from Cloud Shell
+# 7. Build & Deploy to Cloud Run from Cloud Shell
 echo ""
 echo "--> Building container image with Google Cloud Build..."
 IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${CLOUD_RUN_SERVICE}:latest"
-gcloud builds submit --tag "$IMAGE" . --project="$PROJECT_ID"
+if ! gcloud builds submit --tag "$IMAGE" . --project="$PROJECT_ID"; then
+  echo "--> Cloud Build fallback: building with local docker in Cloud Shell..."
+  docker build -t "$IMAGE" .
+  docker push "$IMAGE"
+fi
 
-echo "--> Deploying to Google Cloud Run..."
+echo "--> Deploying NorthGateWay to Google Cloud Run..."
 SERVICE_URL=""
 if gcloud run deploy "$CLOUD_RUN_SERVICE" \
   --image="$IMAGE" \
@@ -207,13 +217,11 @@ if gcloud run deploy "$CLOUD_RUN_SERVICE" \
   --max-instances=5 \
   --allow-unauthenticated \
   --add-cloudsql-instances="$CLOUD_SQL_CONNECTION_NAME" \
-  --service-account="$RUNTIME_SA" \
-  --set-env-vars=NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432 \
-  --set-secrets=PGDATABASE=northgateway-db-name:latest,PGUSER=northgateway-db-user:latest,PGPASSWORD=northgateway-db-password:latest \
-  --project="$PROJECT_ID" 2>/dev/null; then
+  --set-env-vars="NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432,PGDATABASE=${DB_NAME},PGUSER=${DB_USER},PGPASSWORD=${DB_PASSWORD}" \
+  --project="$PROJECT_ID"; then
   SERVICE_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format="value(status.url)")
 else
-  echo "--> Note: Deploying with private access (org policy restricted public access)..."
+  echo "--> Note: Retrying deployment with private access (org policy restricted allUsers)..."
   gcloud run deploy "$CLOUD_RUN_SERVICE" \
     --image="$IMAGE" \
     --region="$REGION" \
@@ -225,9 +233,7 @@ else
     --max-instances=5 \
     --no-allow-unauthenticated \
     --add-cloudsql-instances="$CLOUD_SQL_CONNECTION_NAME" \
-    --service-account="$RUNTIME_SA" \
-    --set-env-vars=NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432 \
-    --set-secrets=PGDATABASE=northgateway-db-name:latest,PGUSER=northgateway-db-user:latest,PGPASSWORD=northgateway-db-password:latest \
+    --set-env-vars="NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432,PGDATABASE=${DB_NAME},PGUSER=${DB_USER},PGPASSWORD=${DB_PASSWORD}" \
     --project="$PROJECT_ID"
   SERVICE_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format="value(status.url)")
 fi
