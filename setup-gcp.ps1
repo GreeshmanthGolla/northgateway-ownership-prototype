@@ -55,10 +55,14 @@ $sqlCheck = gcloud sql instances describe $sqlInstance --project=$ProjectId 2>$n
 $dbPass = [System.Guid]::NewGuid().ToString("N").Substring(0, 16)
 
 if (-not $sqlCheck) {
-    Write-Host "--> Creating Cloud SQL instance (approx 4-6 minutes)..." -ForegroundColor Yellow
+    Write-Host "--> Creating Cloud SQL instance (approx 4-6 minutes, Org Policy compliant)..." -ForegroundColor Yellow
     gcloud sql instances create $sqlInstance `
       --database-version=POSTGRES_15 `
-      --tier=db-f1-micro `
+      --tier=db-custom-2-8192 `
+      --edition=enterprise `
+      --availability-type=ZONAL `
+      --storage-size=20GB `
+      --no-storage-auto-increase `
       --region=$Region `
       --root-password=$dbPass `
       --project=$ProjectId

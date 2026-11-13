@@ -69,10 +69,15 @@ fi
 # 3. Create Cloud SQL PostgreSQL Instance
 echo "--> Checking Cloud SQL instance '$SQL_INSTANCE_NAME'..."
 if ! gcloud sql instances describe "$SQL_INSTANCE_NAME" --project="$PROJECT_ID" >/dev/null 2>&1; then
-  echo "--> Creating Cloud SQL PostgreSQL instance (this may take 4-7 minutes)..."
+  echo "--> Creating Cloud SQL PostgreSQL instance conforming to lab org policies..."
+  echo "    (Tier: 2 vCPU 8GB RAM, Edition: Enterprise, Zonal, Disk: 20GB)..."
   gcloud sql instances create "$SQL_INSTANCE_NAME" \
     --database-version=POSTGRES_15 \
-    --tier=db-f1-micro \
+    --tier=db-custom-2-8192 \
+    --edition=enterprise \
+    --availability-type=ZONAL \
+    --storage-size=20GB \
+    --no-storage-auto-increase \
     --region="$REGION" \
     --root-password="$DB_PASSWORD" \
     --project="$PROJECT_ID"
@@ -177,10 +182,58 @@ gcloud iam service-accounts add-iam-policy-binding "$DEPLOY_SA" \
 
 WIF_PROVIDER_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools/${WIF_POOL_NAME}/providers/${WIF_PROVIDER_NAME}"
 
+# 7. Optional Direct Build & Deploy from Cloud Shell
+echo ""
+echo "--> Building container image with Google Cloud Build..."
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPO}/${CLOUD_RUN_SERVICE}:latest"
+gcloud builds submit --tag "$IMAGE" . --project="$PROJECT_ID"
+
+echo "--> Deploying to Google Cloud Run..."
+SERVICE_URL=""
+if gcloud run deploy "$CLOUD_RUN_SERVICE" \
+  --image="$IMAGE" \
+  --region="$REGION" \
+  --platform=managed \
+  --port=8080 \
+  --memory=512Mi \
+  --cpu=1 \
+  --min-instances=0 \
+  --max-instances=5 \
+  --allow-unauthenticated \
+  --add-cloudsql-instances="$CLOUD_SQL_CONNECTION_NAME" \
+  --service-account="$RUNTIME_SA" \
+  --set-env-vars=NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432 \
+  --set-secrets=PGDATABASE=northgateway-db-name:latest,PGUSER=northgateway-db-user:latest,PGPASSWORD=northgateway-db-password:latest \
+  --project="$PROJECT_ID" 2>/dev/null; then
+  SERVICE_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format="value(status.url)")
+else
+  echo "--> Note: Deploying with private access (org policy restricted public access)..."
+  gcloud run deploy "$CLOUD_RUN_SERVICE" \
+    --image="$IMAGE" \
+    --region="$REGION" \
+    --platform=managed \
+    --port=8080 \
+    --memory=512Mi \
+    --cpu=1 \
+    --min-instances=0 \
+    --max-instances=5 \
+    --no-allow-unauthenticated \
+    --add-cloudsql-instances="$CLOUD_SQL_CONNECTION_NAME" \
+    --service-account="$RUNTIME_SA" \
+    --set-env-vars=NODE_ENV=production,PORT=8080,OWNERSHIP_THRESHOLD=25,PGHOST=/cloudsql/${CLOUD_SQL_CONNECTION_NAME},PGPORT=5432 \
+    --set-secrets=PGDATABASE=northgateway-db-name:latest,PGUSER=northgateway-db-user:latest,PGPASSWORD=northgateway-db-password:latest \
+    --project="$PROJECT_ID"
+  SERVICE_URL=$(gcloud run services describe "$CLOUD_RUN_SERVICE" --region="$REGION" --project="$PROJECT_ID" --format="value(status.url)")
+fi
+
 echo ""
 echo "=================================================================="
-echo "PROVISIONING COMPLETE!"
+echo "DEPLOYMENT COMPLETE!"
+if [[ -n "$SERVICE_URL" ]]; then
+  echo "Live Cloud Run URL: $SERVICE_URL"
+fi
 echo "=================================================================="
+echo "GitHub Actions CI/CD Configuration"
 echo "Add these 5 Variables in your GitHub Repository Settings:"
 echo "URL: https://github.com/${GITHUB_REPO}/settings/variables/actions"
 echo ""
@@ -194,5 +247,5 @@ echo "GCP_RUNTIME_SERVICE_ACCOUNT   $RUNTIME_SA"
 echo "CLOUD_SQL_INSTANCE            $CLOUD_SQL_CONNECTION_NAME"
 echo "=================================================================="
 echo ""
-echo "Once these variables are set, pushing a commit to 'main' or clicking"
-echo "'Run workflow' in GitHub Actions will automatically deploy to Cloud Run!"
+echo "Once these variables are set in GitHub, every push to 'main'"
+echo "will automatically test and deploy to Cloud Run!"
